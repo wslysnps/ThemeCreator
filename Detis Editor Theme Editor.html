@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detis Editor Theme Editor</title>
+<style>
+  :root { --ui-font: "Segoe UI", system-ui, -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 13px/1.35 var(--ui-font); background: #16171a; color: #e4e5e7; display: flex; flex-direction: column; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+
+  /* ---------- tool chrome ---------- */
+  .topbar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #0f1012; border-bottom: 1px solid #26282c; flex-wrap: wrap; }
+  .topbar h1 { font-size: 14px; font-weight: 600; margin: 0 12px 0 0; letter-spacing: .2px; }
+  .topbar .spacer { flex: 1; }
+  .tbtn { background: #2a2c31; border: 1px solid #383b41; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  .tbtn:hover { background: #34373d; }
+  .tbtn.primary { background: #2f6fd0; border-color: #3b7de0; }
+  .tbtn.primary:hover { background: #3b7de0; }
+  .tbtn.danger:hover { background: #7a2a2a; border-color: #94393a; }
+  select.tsel { background: #2a2c31; border: 1px solid #383b41; border-radius: 4px; padding: 4px 6px; }
+  .main { flex: 1; display: grid; grid-template-columns: 440px 1fr; min-height: 0; }
+  .sidebar { border-right: 1px solid #26282c; display: flex; flex-direction: column; min-height: 0; background: #1b1c20; }
+  .sidebar .filters { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #26282c; }
+  .sidebar .filters input[type=search] { flex: 1; background: #121315; border: 1px solid #33363b; border-radius: 4px; padding: 4px 8px; }
+  .keys { overflow: auto; flex: 1; padding: 4px 0 24px; }
+  .group-title { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8d9096; padding: 12px 12px 4px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; padding: 4px 12px; border-left: 3px solid transparent; }
+  .row:hover { background: #222429; }
+  .row.flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { background: #2f6fd055; border-left-color: #3b7de0; } 100% { background: transparent; } }
+  .row .name { font-family: ui-monospace, Consolas, monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .name small { display: block; font-family: var(--ui-font); color: #7f8389; font-size: 11px; }
+  .row.inherited .name { color: #9a9ea4; }
+  .row .ctl { display: flex; gap: 6px; align-items: center; }
+  .swatch { width: 34px; height: 22px; border: 1px solid #44474d; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer;
+            background-image: linear-gradient(45deg,#666 25%,transparent 25%,transparent 75%,#666 75%),linear-gradient(45deg,#666 25%,#999 25%,#999 75%,#666 75%);
+            background-size: 8px 8px; background-position: 0 0, 4px 4px; }
+  .swatch span { position: absolute; inset: 0; }
+  .swatch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
+  .num { width: 54px; background: #121315; border: 1px solid #33363b; border-radius: 3px; padding: 2px 4px; text-align: right; }
+  .hex { width: 70px; background: #121315; border: 1px solid #33363b; border-radius: 3px; padding: 2px 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .alpha { width: 60px; }
+  .badge { min-width: 56px; text-align: center; font-size: 10px; padding: 1px 5px; border-radius: 8px; background: #2a2c31; color: #8d9096; white-space: nowrap; }
+  .badge.ov { background: #2f6fd033; color: #8fb8ff; }
+  .reset { background: none; border: 0; color: #8d9096; cursor: pointer; padding: 0 2px; font-size: 14px; }
+  .reset:hover { color: #fff; }
+  .reset[disabled] { visibility: hidden; }
+
+  .previewwrap { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #0c0d0e; }
+  .previewbar { display: flex; gap: 12px; align-items: center; padding: 6px 12px; color: #8d9096; font-size: 12px; border-bottom: 1px solid #26282c; }
+  .previewbar label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .previewscroll { flex: 1; overflow: auto; padding: 12px; }
+  .hint { color: #8d9096; font-size: 12px; }
+
+  /* ---------- modal ---------- */
+  .modal { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal.open { display: flex; }
+  .modal .box { background: #1e2024; border: 1px solid #383b41; border-radius: 8px; width: min(820px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+  .modal .box header { padding: 12px 16px; border-bottom: 1px solid #2c2f34; display: flex; align-items: center; gap: 8px; }
+  .modal .box header h2 { font-size: 14px; margin: 0; flex: 1; }
+  .modal textarea { flex: 1; min-height: 360px; margin: 12px 16px; background: #0f1012; border: 1px solid #33363b; border-radius: 4px; padding: 8px; font: 12px/1.45 ui-monospace, Consolas, monospace; resize: vertical; }
+  .modal footer { padding: 0 16px 14px; display: flex; gap: 8px; align-items: center; }
+  .modal footer .msg { color: #8d9096; font-size: 12px; flex: 1; }
+  .modal input[type=text] { background: #0f1012; border: 1px solid #33363b; border-radius: 4px; padding: 6px 8px; margin: 12px 16px; }
+
+  /* ---------- the mock editor, driven by --t-* variables ---------- */
+  .ed { --r-window: 1px; --r-child: 1px; --r-frame: 1px; --r-popup: 1px; --r-scroll: 4px; --r-grab: 1px; --r-tab: 1px;
+        font: 12.5px/1.3 var(--ui-font); color: var(--t-text); background: var(--t-background_chrome);
+        min-width: 1060px; border: 1px solid var(--t-border_color); border-radius: var(--r-window); overflow: hidden; user-select: none; }
+  .ed [data-k] { cursor: pointer; }
+  .ed.outline [data-k]:hover { outline: 1px dashed #fff8; outline-offset: -1px; }
+  .ed .menubar { display: flex; gap: 14px; padding: 3px 10px; background: var(--t-background_chrome); border-bottom: 1px solid var(--t-border_color); }
+  .ed .menubar span:hover { color: var(--t-text_hovered); }
+  .ed .cols { display: grid; grid-template-columns: 270px 1fr 300px; height: 640px; }
+  .ed .panel { background: var(--t-background_panel); border-right: 1px solid var(--t-border_color); display: flex; flex-direction: column; min-height: 0; position: relative; }
+  .ed .panel.right { border-right: 0; border-left: 1px solid var(--t-border_color); }
+  .ed .tabs { display: flex; gap: 2px; padding: 3px 4px 0; background: var(--t-title_bg_active); border-bottom: 1px solid var(--t-border_color); }
+  .ed .tab { padding: 3px 10px; background: var(--t-tab); border-radius: var(--r-tab) var(--r-tab) 0 0; color: var(--t-text); }
+  .ed .tab:hover { background: var(--t-header_hovered); }
+  .ed .tab.active { background: var(--t-accent_color_mid); color: var(--t-text_active); }
+  .ed .tab.dim { background: var(--t-tab_dimmed); color: var(--t-text_disabled); }
+  .ed .body { padding: 6px; display: flex; flex-direction: column; gap: 5px; min-height: 0; flex: 1; overflow: hidden; }
+  .ed .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--t-background_button); border-radius: var(--r-frame); padding: 3px 9px; width: max-content; border: 1px solid var(--t-border_color); }
+  .ed .btn:hover { background: var(--t-background_button_hover); }
+  .ed .btn:active, .ed .btn.pressed { background: var(--t-accent_color); }
+  .ed .frame { background: var(--t-background_frame); border: 1px solid var(--t-border_color); border-radius: var(--r-frame); padding: 3px 7px; color: var(--t-text); }
+  .ed .frame:hover { background: var(--t-background_frame_hover); }
+  .ed .frame.ph { color: var(--t-text_disabled); }
+  .ed .tree { background: var(--t-background_panel_inner); border-radius: var(--r-child); padding: 4px 0; flex: 1; overflow: hidden; }
+  .ed .tree div { padding: 2px 8px; white-space: nowrap; }
+  .ed .tree div:hover { background: var(--t-header_hovered); color: var(--t-text_hovered); }
+  .ed .tree .sel { background: var(--t-header); }
+  .ed .tree .prefab { color: var(--t-prefab_instance_text); }
+  .ed .tree .prefab.sel { color: var(--t-prefab_instance_selected_text); }
+  .ed .tree .prefab.unl { color: var(--t-prefab_instance_unlocked_text); }
+  .ed .tree .prefab.unl.sel { color: var(--t-prefab_instance_unlocked_selected_text); }
+  .ed .chev { display: inline-block; width: 12px; color: var(--t-text_disabled); }
+  .ed .sect { border-radius: var(--r-frame); overflow: hidden; }
+  .ed .sect > .sh { background: var(--t-accent_color_mid); color: var(--t-text_active); padding: 3px 8px; border-radius: var(--r-frame); }
+  .ed .sect > .sh:hover { background: var(--t-accent_color_hover); }
+  .ed .sect > .sb { background: var(--t-property_section); padding: 5px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .ed .sect > .sb:hover { background: var(--t-property_section_hovered); }
+  .ed .sect.open > .sb { background: var(--t-property_section_active); }
+  .ed .kv { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+  .ed .label-a { color: var(--t-prefab_instance_text); }
+  .ed .check { display: flex; align-items: center; gap: 7px; }
+  .ed .box { width: 15px; height: 15px; background: var(--t-background_frame); border: 1px solid var(--t-border_color); border-radius: var(--r-frame); display: grid; place-items: center; }
+  .ed .box:hover { background: var(--t-background_frame_hover); }
+  .ed .box.on::after { content: ""; width: 9px; height: 5px; border-left: 2px solid var(--t-accent_color); border-bottom: 2px solid var(--t-accent_color); transform: rotate(-45deg) translate(1px,-1px); }
+  .ed .slider { position: relative; height: 20px; background: var(--t-background_frame); border: 1px solid var(--t-border_color); border-radius: var(--r-frame); }
+  .ed .slider:hover { background: var(--t-background_frame_hover); }
+  .ed .slider .grab { position: absolute; top: 2px; bottom: 2px; left: 38%; width: 10px; background: var(--t-slider_grab); border-radius: var(--r-grab); }
+  .ed .slider .grab.act { left: 70%; background: var(--t-slider_grab_active); }
+  .ed .slider span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11.5px; }
+  .ed .sep { height: 1px; background: var(--t-separator); margin: 3px 0; }
+  .ed .sep:hover { background: var(--t-separator_hovered); }
+  .ed .scroll { position: absolute; right: 2px; top: 40px; width: 9px; bottom: 30px; }
+  .ed .scroll .g { position: absolute; left: 0; right: 0; top: 12%; height: 28%; background: var(--t-scrollbar_grab); border-radius: var(--r-scroll); }
+  .ed .scroll .g:hover { background: var(--t-scrollbar_grab_hovered); }
+  .ed .scroll .g.act { top: 55%; height: 18%; background: var(--t-scrollbar_grab_active); }
+  .ed .grip { position: absolute; right: 0; bottom: 0; width: 0; height: 0; border-left: 12px solid transparent; border-bottom: 12px solid var(--t-resize_grip); }
+  .ed .grip:hover { border-bottom-color: var(--t-resize_grip_hovered); }
+  .ed .center { display: flex; flex-direction: column; min-width: 0; background: var(--t-background_panel); }
+  .ed .vtool { display: flex; gap: 3px; align-items: center; padding: 4px 6px; background: var(--t-background_panel); border-bottom: 1px solid var(--t-border_color); }
+  .ed .vbtn { width: 22px; height: 20px; background: var(--t-viewport_toolbar_accent); border-radius: var(--r-frame); display: grid; place-items: center; color: #fff; font-size: 11px; }
+  .ed .vbtn:hover { background: var(--t-viewport_toolbar_accent_hover); }
+  .ed .vbtn.mid { background: var(--t-viewport_toolbar_accent_mid); }
+  .ed .vbtn.play { background: var(--t-accent_color); }
+  .ed .vbtn.raised { background: var(--t-background_raised); color: var(--t-text); }
+  .ed .viewport { flex: 1; position: relative; overflow: hidden;
+        background: #2b2c2e; }
+  .ed .popup { position: absolute; left: 24px; top: 18px; background: var(--t-background_popup); border: 1px solid var(--t-border_color); border-radius: var(--r-popup); padding: 4px 0; min-width: 160px; box-shadow: 0 6px 20px #0008; }
+  .ed .popup div { padding: 3px 12px; }
+  .ed .popup div:hover { background: var(--t-accent_color); color: var(--t-widget_interaction_text_eff); }
+  .ed .popup .dis { color: var(--t-text_disabled); }
+  .ed .bottom { height: 170px; border-top: 1px solid var(--t-border_color); display: flex; flex-direction: column; background: var(--t-background_panel); }
+  .ed table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .ed th { background: var(--t-table_header_bg); text-align: left; font-weight: 600; padding: 3px 8px; border-bottom: 1px solid var(--t-table_border_light); }
+  .ed td { padding: 3px 8px; border-bottom: 1px solid var(--t-table_border_light); }
+  .ed tr.alt td { background: var(--t-table_row_bg_alt); }
+  .ed .dimtext { color: var(--t-text_disabled); }
+  .ed .accenttext { color: var(--t-accent_color); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Detis Editor Theme Editor</h1>
+  <label class="hint">Theme</label>
+  <select class="tsel" id="themeSel"></select>
+  <button class="tbtn" id="btnNew" title="New theme that inherits everything from Default">New</button>
+  <button class="tbtn" id="btnDup" title="Copy the current theme, including its inherited values">Duplicate</button>
+  <button class="tbtn" id="btnRename">Rename</button>
+  <button class="tbtn danger" id="btnDelete">Delete</button>
+  <span class="spacer"></span>
+  <button class="tbtn" id="btnUndo" title="Ctrl+Z">Undo</button>
+  <button class="tbtn" id="btnImport">Import .ini</button>
+  <button class="tbtn primary" id="btnExport">Export .ini</button>
+</div>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="filters">
+      <input type="search" id="search" placeholder="Filter keys…">
+      <label class="hint" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><input type="checkbox" id="onlyOv"> overrides only</label>
+    </div>
+    <div class="keys" id="keys"></div>
+  </aside>
+
+  <section class="previewwrap">
+    <div class="previewbar">
+      <span>Live preview: click any element to jump to its setting.</span>
+      <label><input type="checkbox" id="outline" checked> outline on hover</label>
+      <span class="spacer" style="flex:1"></span>
+      <span id="status"></span>
+    </div>
+    <div class="previewscroll">
+      <div class="ed outline" id="ed">
+        <div class="menubar" data-k="background_chrome,text,text_hovered">
+          <span>File</span><span>Edit</span><span>View</span><span>Debug</span><span>Help</span><span>About</span>
+        </div>
+        <div class="cols">
+          <!-- left panel -->
+          <div class="panel" data-k="background_panel">
+            <div class="tabs" data-k="title_bg_active">
+              <div class="tab active" data-k="accent_color_mid,text_active">World Inspector</div>
+              <div class="tab dim" data-k="tab_dimmed,text_disabled">Module Manager</div>
+            </div>
+            <div class="body">
+              <div class="btn" data-k="background_button,background_button_hover,accent_color">⊕ Add New Entity</div>
+              <div class="frame ph" data-k="background_frame,background_frame_hover,border_color,text_disabled">Search entities...</div>
+              <div class="tree" data-k="background_panel_inner,header_hovered,text_hovered">
+                <div><span class="chev">▾</span>root</div>
+                <div style="padding-left:20px"><span class="chev">▸</span>particles</div>
+                <div style="padding-left:20px"><span class="chev">▸</span>water</div>
+                <div class="sel" data-k="header" style="padding-left:20px"><span class="chev">▸</span>static_geometry</div>
+                <div style="padding-left:20px"><span class="chev">▸</span>sound</div>
+                <div style="padding-left:20px"><span class="chev">▸</span>lighting</div>
+                <div class="prefab" data-k="prefab_instance_text" style="padding-left:32px">▣ Hl_Player_Character</div>
+                <div class="prefab sel" data-k="prefab_instance_selected_text,header" style="padding-left:32px">▣ rock_small_02 (selected)</div>
+                <div class="prefab unl" data-k="prefab_instance_unlocked_text" style="padding-left:32px">▣ Fox_Player (unlocked)</div>
+                <div class="prefab unl sel" data-k="prefab_instance_unlocked_selected_text,header" style="padding-left:32px">▣ lamp_cube (unlocked, selected)</div>
+              </div>
+              <div class="tabs" data-k="title_bg_active" style="margin:0 -6px">
+                <div class="tab active" data-k="accent_color_mid">World Set…</div>
+                <div class="tab" data-k="tab,header_hovered">Material Edi…</div>
+                <div class="tab" data-k="tab">Engine Setti…</div>
+              </div>
+              <div class="kv"><div class="frame" data-k="background_frame">The Orb Arrival</div><span>World Name</span></div>
+              <div class="sect open" data-k="property_section_active">
+                <div class="sh" data-k="accent_color_mid,accent_color_hover,text_active">▾ Culling</div>
+                <div class="sb" data-k="property_section,property_section_hovered,property_section_active">
+                  <div class="check" data-k="background_frame,accent_color"><span class="box"></span>Active</div>
+                  <div class="kv"><div class="slider" data-k="background_frame,slider_grab" style="width:150px"><div class="grab"></div><span>10.0</span></div><span>Distance (m)</span></div>
+                </div>
+              </div>
+              <div class="sect">
+                <div class="sh" data-k="accent_color_mid,accent_color_hover">▾ Sky / Environment</div>
+                <div class="sb" data-k="property_section,property_section_hovered">
+                  <div class="check" data-k="accent_color"><span class="box on"></span>Active</div>
+                  <div class="kv"><div class="slider" data-k="slider_grab_active" style="width:150px"><div class="grab act"></div><span>1.000</span></div><span>Dome Brightness</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="scroll" data-k="scrollbar_grab,scrollbar_grab_hovered,scrollbar_rounding"><div class="g"></div></div>
+            <div class="grip" data-k="resize_grip,resize_grip_hovered"></div>
+          </div>
+
+          <!-- center -->
+          <div class="center">
+            <div class="vtool" data-k="background_panel">
+              <div class="vbtn" data-k="viewport_toolbar_accent,viewport_toolbar_accent_hover">✥</div>
+              <div class="vbtn" data-k="viewport_toolbar_accent">≡</div>
+              <div class="vbtn" data-k="viewport_toolbar_accent">◍</div>
+              <div class="vbtn mid" data-k="viewport_toolbar_accent_mid">▤</div>
+              <div class="vbtn raised" data-k="background_raised">▲</div>
+              <div class="vbtn raised" data-k="background_raised">◐</div>
+              <span style="flex:1"></span>
+              <div class="vbtn play" data-k="accent_color">▶</div>
+              <div class="vbtn raised" data-k="background_raised">⛶</div>
+              <div class="vbtn" data-k="viewport_toolbar_accent">🔇</div>
+              <div class="frame" data-k="background_frame" style="width:64px;text-align:center">23.55</div>
+              <span>Spectator Speed</span>
+            </div>
+            <div class="viewport">
+              <div class="popup" data-k="background_popup,border_color,popup_rounding">
+                <div>Duplicate</div><div>Rename</div><div class="dis" data-k="text_disabled">Paste (disabled)</div><div>Delete</div>
+              </div>
+            </div>
+            <div class="bottom">
+              <div class="tabs" data-k="title_bg_active">
+                <div class="tab" data-k="tab">Log</div>
+                <div class="tab active" data-k="accent_color_mid">Content Issues</div>
+                <div class="tab" data-k="tab">Performance Metrics</div>
+              </div>
+              <div class="body" style="padding:0">
+                <table data-k="table_header_bg,table_border_light,table_row_bg_alt">
+                  <tr><th>Metric</th><th>Live</th><th>Average</th><th>Peak</th></tr>
+                  <tr><td>Frame</td><td>4.21 ms</td><td>4.35 ms</td><td>6.02 ms</td></tr>
+                  <tr class="alt"><td>Render</td><td>2.80 ms</td><td>2.91 ms</td><td>4.10 ms</td></tr>
+                  <tr><td>Scripts</td><td>0.34 ms</td><td>0.31 ms</td><td>0.88 ms</td></tr>
+                  <tr class="alt"><td class="dimtext" data-k="text_disabled">No content issues.</td><td></td><td></td><td></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- right panel -->
+          <div class="panel right" data-k="background_panel">
+            <div class="tabs" data-k="title_bg_active">
+              <div class="tab active" data-k="accent_color_mid">Entity Inspector</div>
+              <div class="tab" data-k="tab,header_hovered">Entity Browser</div>
+            </div>
+            <div class="body">
+              <div class="sect open">
+                <div class="sh" data-k="accent_color_mid,accent_color_hover">▾ Prefab</div>
+                <div class="sb" data-k="property_section_active">
+                  <div><span class="label-a" data-k="prefab_instance_text">Prefab File:</span> rock_small_02.entity</div>
+                  <div class="label-a" data-k="prefab_instance_text">🔒 Status: Locked</div>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <span class="btn" data-k="background_button,background_button_hover">Save</span>
+                    <span class="btn" data-k="background_button">Save As</span>
+                    <span class="btn pressed" data-k="accent_color">Load</span>
+                    <span class="btn" data-k="background_button">Unlock</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sect">
+                <div class="sh" data-k="accent_color_mid">▾ Entity</div>
+                <div class="sb" data-k="property_section,property_section_hovered">
+                  <div>Entity ID: 494</div>
+                  <div class="check"><span class="box on" data-k="accent_color"></span>Active</div>
+                  <div class="kv"><div class="frame" data-k="background_frame" style="width:150px">&nbsp;</div><span>Tags</span></div>
+                </div>
+              </div>
+              <div class="sep" data-k="separator,separator_hovered"></div>
+              <div class="sect">
+                <div class="sh" data-k="accent_color_mid">▾ Mesh</div>
+                <div class="sb" data-k="property_section">
+                  <div><span class="label-a" data-k="prefab_instance_text">Mesh:</span> rock_small_02.glb</div>
+                  <div class="check"><span class="box on"></span>GPU Instancing</div>
+                  <div class="check"><span class="box"></span>Ignore Distance Culling</div>
+                  <div class="kv"><div class="frame" data-k="background_frame">Static ▾</div><span>Body Type</span></div>
+                  <div class="accenttext" data-k="accent_color">Accent coloured text</div>
+                </div>
+              </div>
+            </div>
+            <div class="scroll" data-k="scrollbar_grab_active"><div class="g act"></div></div>
+            <div class="grip" data-k="resize_grip"></div>
+          </div>
+        </div>
+      </div>
+      <p class="hint" style="max-width:1060px">The preview is a hand-built approximation of the editor. Which editor element uses which key is my best reading of the names and your screenshot, not taken from the engine's source, so check the final result in the editor itself.</p>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="modalIO">
+  <div class="box">
+    <header><h2 id="ioTitle">Export</h2><button class="tbtn" id="ioClose">Close</button></header>
+    <div id="exportOpts" style="display:flex;gap:16px;align-items:center;padding:10px 16px 0;flex-wrap:wrap" class="hint">
+      <label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="exmode" value="theme" checked> This theme only (paste at the end of the ini)</label>
+      <label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="exmode" value="file"> Whole file (replace the ini)</label>
+      <label id="inhWrap" style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="exInherited"> include inherited values</label>
+    </div>
+    <textarea id="ioText" spellcheck="false"></textarea>
+    <footer>
+      <span class="msg" id="ioMsg"></span>
+      <input type="file" id="ioFile" accept=".ini,.txt" style="display:none">
+      <button class="tbtn" id="ioPick">Open file…</button>
+      <button class="tbtn primary" id="ioAction">Copy</button>
+    </footer>
+  </div>
+</div>
+
+<div class="modal" id="modalName">
+  <div class="box" style="width:min(420px,94vw)">
+    <header><h2 id="nameTitle">Theme name</h2></header>
+    <input type="text" id="nameInput">
+    <footer><span class="msg" id="nameMsg"></span><button class="tbtn" id="nameCancel">Cancel</button><button class="tbtn primary" id="nameOk">OK</button></footer>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ---------- the shipped file, used as the starting point ----------
+const ORIGINAL_INI = `[Default]
+accent_color = 0.04, 0.54, 0.58, 1.0
+accent_color_mid = 0.04, 0.54, 0.58, 0.58
+accent_color_hover = 0.12, 0.68, 0.72, 1.0
+
+background_panel = 0.185, 0.190, 0.195, 1.0
+background_panel_inner = 0.155, 0.160, 0.165, 1.0
+background_popup = 0.215, 0.220, 0.225, 1.0
+background_chrome = 0.098, 0.100, 0.103, 1.0
+background_frame = 0.118, 0.120, 0.125, 1.0
+background_frame_hover = 0.235, 0.240, 0.245, 1.0
+background_button = 0.255, 0.260, 0.265, 1.0
+background_button_hover = 0.315, 0.320, 0.328, 1.0
+background_raised = 0.275, 0.280, 0.285, 1.0
+border_color = 0.138, 0.140, 0.143, 1.0
+
+text = 0.875, 0.880, 0.885, 1.0
+text_disabled = 0.472, 0.480, 0.485, 1.0
+text_hovered = 1.0, 1.0, 1.0, 1.0
+text_active = 1.0, 1.0, 1.0, 1.0
+
+header = 0.225, 0.230, 0.235, 1.0
+header_hovered = 0.285, 0.290, 0.295, 1.0
+tab = 0.155, 0.160, 0.165, 1.0
+tab_dimmed = 0.118, 0.120, 0.125, 1.0
+title_bg_active = 0.108, 0.110, 0.113, 1.0
+
+property_section = 0.138, 0.142, 0.147, 1.0
+property_section_hovered = 0.168, 0.172, 0.177, 1.0
+property_section_active = 0.152, 0.156, 0.161, 1.0
+
+scrollbar_grab = 0.342, 0.350, 0.358, 1.0
+scrollbar_grab_hovered = 0.430, 0.440, 0.450, 1.0
+scrollbar_grab_active = 0.530, 0.540, 0.550, 1.0
+slider_grab = 0.372, 0.380, 0.388, 1.0
+slider_grab_active = 0.490, 0.500, 0.510, 1.0
+separator = 0.430, 0.440, 0.450, 1.0
+separator_hovered = 0.520, 0.530, 0.540, 1.0
+resize_grip = 0.342, 0.350, 0.358, 1.0
+resize_grip_hovered = 0.450, 0.460, 0.470, 1.0
+table_header_bg = 0.225, 0.230, 0.235, 1.0
+table_border_light = 0.245, 0.250, 0.255, 1.0
+table_row_bg_alt = 1.0, 1.0, 1.0, 0.01
+
+widget_interaction_text = 1.0, 1.0, 1.0, 1.0
+use_widget_interaction_text_override = false
+
+prefab_instance_text = 0.1, 0.7, 0.75, 1.0
+prefab_instance_selected_text = 0.35, 0.95, 1.0, 1.0
+prefab_instance_unlocked_text = 0.90, 0.72, 0.22, 1.0
+prefab_instance_unlocked_selected_text = 1.0, 0.82, 0.35, 1.0
+
+viewport_toolbar_accent = 0.95, 0.52, 0.12, 1.0
+viewport_toolbar_accent_mid = 0.95, 0.52, 0.12, 0.58
+viewport_toolbar_accent_hover = 1.0, 0.64, 0.28, 1.0
+
+window_rounding = 1.0
+child_rounding = 1.0
+frame_rounding = 1.0
+popup_rounding = 1.0
+scrollbar_rounding = 4.0
+grab_rounding = 1.0
+tab_rounding = 1.0
+
+; -------------------------------------------------------
+
+[Dark Blue]
+accent_color = 0.16, 0.46, 0.81, 1.0
+accent_color_mid = 0.16, 0.46, 0.81, 0.58
+accent_color_hover = 0.24, 0.56, 0.93, 1.0
+
+background_panel = 0.15, 0.15, 0.16, 1.0
+background_panel_inner = 0.12, 0.12, 0.13, 1.0
+background_popup = 0.17, 0.17, 0.18, 1.0
+background_chrome = 0.07, 0.07, 0.08, 1.0
+background_frame = 0.09, 0.09, 0.10, 1.0
+background_frame_hover = 0.18, 0.18, 0.19, 1.0
+background_button = 0.20, 0.20, 0.22, 1.0
+background_button_hover = 0.26, 0.26, 0.28, 1.0
+background_raised = 0.22, 0.22, 0.24, 1.0
+border_color = 0.22, 0.22, 0.23, 1.0
+
+prefab_instance_text = 0.35, 0.75, 1.0, 1.0
+prefab_instance_selected_text = 0.65, 0.95, 1.0, 1.0
+
+viewport_toolbar_accent = 0.95, 0.52, 0.12, 1.0
+viewport_toolbar_accent_mid = 0.95, 0.52, 0.12, 0.58
+viewport_toolbar_accent_hover = 1.0, 0.64, 0.28, 1.0
+
+property_section = 0.105, 0.105, 0.115, 1.0
+property_section_hovered = 0.135, 0.135, 0.148, 1.0
+property_section_active = 0.118, 0.118, 0.130, 1.0
+`;
+
+// ---------- key catalogue: order, groups, types and what each one drives in the preview ----------
+const GROUPS = [
+  ["Accent", [
+    ["accent_color", "Pressed buttons, check marks, play button"],
+    ["accent_color_mid", "Section headers, active tabs"],
+    ["accent_color_hover", "Hovered section headers"]]],
+  ["Backgrounds", [
+    ["background_panel", "Panel windows"],
+    ["background_panel_inner", "Inner areas (hierarchy list)"],
+    ["background_popup", "Popups and context menus"],
+    ["background_chrome", "Menu bar and outer frame"],
+    ["background_frame", "Input fields, checkboxes, sliders"],
+    ["background_frame_hover", "Hovered input fields"],
+    ["background_button", "Buttons"],
+    ["background_button_hover", "Hovered buttons"],
+    ["background_raised", "Raised toolbar buttons"],
+    ["border_color", "Borders"]]],
+  ["Text", [
+    ["text", "Normal text"],
+    ["text_disabled", "Placeholder and disabled text"],
+    ["text_hovered", "Hovered text"],
+    ["text_active", "Active tab and header text"]]],
+  ["Headers & tabs", [
+    ["header", "Selected list rows"],
+    ["header_hovered", "Hovered list rows and tabs"],
+    ["tab", "Inactive tabs"],
+    ["tab_dimmed", "Tabs of unfocused windows"],
+    ["title_bg_active", "Tab bar background"]]],
+  ["Property sections", [
+    ["property_section", "Section body"],
+    ["property_section_hovered", "Hovered section body"],
+    ["property_section_active", "Open or active section body"]]],
+  ["Widgets", [
+    ["scrollbar_grab", "Scrollbar"],
+    ["scrollbar_grab_hovered", "Hovered scrollbar"],
+    ["scrollbar_grab_active", "Dragged scrollbar"],
+    ["slider_grab", "Slider handle"],
+    ["slider_grab_active", "Dragged slider handle"],
+    ["separator", "Separator lines"],
+    ["separator_hovered", "Hovered separators"],
+    ["resize_grip", "Window resize corner"],
+    ["resize_grip_hovered", "Hovered resize corner"],
+    ["table_header_bg", "Table header row"],
+    ["table_border_light", "Table lines"],
+    ["table_row_bg_alt", "Alternate table rows"]]],
+  ["Widget text override", [
+    ["widget_interaction_text", "Text on hovered/active widgets"],
+    ["use_widget_interaction_text_override", "Use the colour above", "bool"]]],
+  ["Prefab names", [
+    ["prefab_instance_text", "Prefab instances and file labels"],
+    ["prefab_instance_selected_text", "Selected prefab instance"],
+    ["prefab_instance_unlocked_text", "Unlocked prefab instance"],
+    ["prefab_instance_unlocked_selected_text", "Unlocked and selected"]]],
+  ["Viewport toolbar", [
+    ["viewport_toolbar_accent", "Toolbar buttons"],
+    ["viewport_toolbar_accent_mid", "Toolbar buttons, mid state"],
+    ["viewport_toolbar_accent_hover", "Hovered toolbar buttons"]]],
+  ["Rounding (pixels)", [
+    ["window_rounding", "Windows", "float"],
+    ["child_rounding", "Inner areas", "float"],
+    ["frame_rounding", "Fields and buttons", "float"],
+    ["popup_rounding", "Popups", "float"],
+    ["scrollbar_rounding", "Scrollbars", "float"],
+    ["grab_rounding", "Slider handles", "float"],
+    ["tab_rounding", "Tabs", "float"]]],
+];
+const KEY_INFO = {};
+const KEY_ORDER = [];
+const KEY_GROUP_START = new Set();
+for (const [, items] of GROUPS) {
+  items.forEach(([key, desc, type], index) => {
+    KEY_INFO[key] = { desc, type: type || "color" };
+    KEY_ORDER.push(key);
+    if (index === 0) KEY_GROUP_START.add(key);
+  });
+}
+const ROUNDING_VAR = { window_rounding: "--r-window", child_rounding: "--r-child", frame_rounding: "--r-frame",
+  popup_rounding: "--r-popup", scrollbar_rounding: "--r-scroll", grab_rounding: "--r-grab", tab_rounding: "--r-tab" };
+
+// ---------- state ----------
+// themes: [{ name, values: { key: rawString } }]. Default holds every key; others only overrides.
+let state = { themes: [], current: "Dark Blue", trailer: "" };
+const undoStack = [];
+
+function parseIni(text) {
+  const themes = [];
+  let current = null;
+  let trailerStart = -1;
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    const section = trimmed.match(/^\[(.+)\]$/);
+    if (section) {
+      current = { name: section[1].trim(), values: {} };
+      themes.push(current);
+      trailerStart = -1;
+      return;
+    }
+    if (!trimmed || trimmed.startsWith(";") || trimmed.startsWith("#")) {
+      if (trimmed.startsWith("; [") && trailerStart < 0) trailerStart = index;
+      return;
+    }
+    const kv = trimmed.match(/^([^=]+?)\s*=\s*(.*)$/);
+    if (kv && current) current.values[kv[1].trim()] = kv[2].trim();
+  });
+  // Keep the commented "custom theme" template at the end of the file.
+  let trailer = "";
+  if (trailerStart >= 0) {
+    const tail = lines.slice(trailerStart);
+    while (tail.length && !tail[tail.length - 1].trim()) tail.pop();
+    trailer = tail.join("\n");
+  }
+  return { themes, trailer };
+}
+
+function getTheme(name) { return state.themes.find(t => t.name === name); }
+function defaultTheme() { return getTheme("Default") || state.themes[0]; }
+function isDefault(theme) { return theme === defaultTheme(); }
+
+function effective(theme, key) {
+  if (theme.values[key] !== undefined) return theme.values[key];
+  const base = defaultTheme();
+  return base && base.values[key] !== undefined ? base.values[key] : null;
+}
+
+function parseColor(raw) {
+  const parts = (raw || "").split(",").map(s => parseFloat(s));
+  while (parts.length < 4) parts.push(parts.length === 3 ? 1 : 0);
+  return parts.slice(0, 4).map(v => (isFinite(v) ? Math.min(1, Math.max(0, v)) : 0));
+}
+function fmt(v) {
+  let s = (Math.round(v * 1000) / 1000).toFixed(3).replace(/0+$/, "");
+  if (s.endsWith(".")) s += "0";
+  return s;
+}
+function colorToRaw(c) { return c.map(fmt).join(", "); }
+function toHex(c) { return "#" + c.slice(0, 3).map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join(""); }
+function fromHex(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
+function cssColor(c) { return `rgba(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)}, ${c[3]})`; }
+
+// ---------- persistence for one browser (optional) ----------
+const STORE_KEY = "detis-theme-editor-v1";
+function saveDraft() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+}
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.themes) && parsed.themes.length) { state = parsed; return true; }
+  } catch (e) { /* ignore */ }
+  return false;
+}
+
+function snapshot() {
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > 200) undoStack.shift();
+}
+function undo() {
+  const previous = undoStack.pop();
+  if (!previous) return;
+  state = JSON.parse(previous);
+  renderAll();
+}
+
+// ---------- preview ----------
+const ed = document.getElementById("ed");
+function applyPreview() {
+  const theme = getTheme(state.current);
+  for (const key of KEY_ORDER) {
+    const info = KEY_INFO[key];
+    const raw = effective(theme, key);
+    if (raw === null) continue;
+    if (info.type === "color") ed.style.setProperty("--t-" + key, cssColor(parseColor(raw)));
+    else if (info.type === "float") ed.style.setProperty(ROUNDING_VAR[key], Math.max(0, parseFloat(raw) || 0) + "px");
+  }
+  // Text on hovered/active widgets: the override colour only when the switch is on.
+  const useOverride = String(effective(theme, "use_widget_interaction_text_override")).toLowerCase() === "true";
+  ed.style.setProperty("--t-widget_interaction_text_eff", useOverride
+    ? cssColor(parseColor(effective(theme, "widget_interaction_text"))) : "var(--t-text_hovered)");
+}
+
+// ---------- key list ----------
+const keysEl = document.getElementById("keys");
+const searchEl = document.getElementById("search");
+const onlyOvEl = document.getElementById("onlyOv");
+
+function renderKeys() {
+  const theme = getTheme(state.current);
+  const filter = searchEl.value.trim().toLowerCase();
+  const onlyOv = onlyOvEl.checked && !isDefault(theme);
+  keysEl.innerHTML = "";
+  for (const [groupName, items] of GROUPS) {
+    const rows = items.filter(([key, desc]) => {
+      if (filter && !key.includes(filter) && !desc.toLowerCase().includes(filter)) return false;
+      if (onlyOv && theme.values[key] === undefined) return false;
+      return true;
+    });
+    if (!rows.length) continue;
+    const title = document.createElement("div");
+    title.className = "group-title";
+    title.textContent = groupName;
+    keysEl.appendChild(title);
+    for (const [key] of rows) keysEl.appendChild(buildRow(theme, key));
+  }
+  if (!keysEl.children.length) keysEl.innerHTML = '<p class="hint" style="padding:12px">No keys match.</p>';
+}
+
+function buildRow(theme, key) {
+  const info = KEY_INFO[key];
+  const overridden = isDefault(theme) || theme.values[key] !== undefined;
+  const raw = effective(theme, key);
+  const row = document.createElement("div");
+  row.className = "row" + (overridden ? "" : " inherited");
+  row.dataset.key = key;
+
+  const name = document.createElement("div");
+  name.className = "name";
+  name.title = key;
+  name.innerHTML = `${key}<small>${info.desc}</small>`;
+  row.appendChild(name);
+
+  const ctl = document.createElement("div");
+  ctl.className = "ctl";
+
+  if (info.type === "color") {
+    const c = parseColor(raw);
+    const swatch = document.createElement("label");
+    swatch.className = "swatch";
+    swatch.title = "Pick colour";
+    const fill = document.createElement("span");
+    fill.style.background = cssColor(c);
+    const picker = document.createElement("input");
+    picker.type = "color";
+    picker.value = toHex(c);
+    swatch.append(fill, picker);
+
+    const hex = document.createElement("input");
+    hex.className = "hex";
+    hex.value = toHex(c);
+    hex.title = "Hex colour";
+
+    const alpha = document.createElement("input");
+    alpha.type = "number"; alpha.min = 0; alpha.max = 1; alpha.step = 0.01;
+    alpha.className = "num alpha";
+    alpha.value = fmt(c[3]);
+    alpha.title = "Alpha (0 to 1)";
+
+    let started = false;
+    const commit = (rgb, a, live) => {
+      if (!started) { snapshot(); started = true; }
+      const value = colorToRaw([...rgb, a]);
+      theme.values[key] = value;
+      fill.style.background = cssColor([...rgb, a]);
+      applyPreview();
+      if (!live) { started = false; saveDraft(); renderKeys(); }
+      else markOverridden(row, theme);
+    };
+    picker.addEventListener("input", () => { hex.value = picker.value; commit(fromHex(picker.value), parseFloat(alpha.value) || 0, true); });
+    picker.addEventListener("change", () => commit(fromHex(picker.value), parseFloat(alpha.value) || 0, false));
+    hex.addEventListener("change", () => {
+      const v = hex.value.trim().replace(/^#?/, "#");
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) commit(fromHex(v), parseFloat(alpha.value) || 0, false);
+      else hex.value = picker.value;
+    });
+    alpha.addEventListener("input", () => commit(fromHex(picker.value), Math.min(1, Math.max(0, parseFloat(alpha.value) || 0)), true));
+    alpha.addEventListener("change", () => commit(fromHex(picker.value), Math.min(1, Math.max(0, parseFloat(alpha.value) || 0)), false));
+    ctl.append(swatch, hex, alpha);
+  } else if (info.type === "float") {
+    const num = document.createElement("input");
+    num.type = "number"; num.min = 0; num.max = 16; num.step = 0.5;
+    num.className = "num";
+    num.value = parseFloat(raw) || 0;
+    let started = false;
+    const commit = (live) => {
+      if (!started) { snapshot(); started = true; }
+      theme.values[key] = fmt(Math.max(0, parseFloat(num.value) || 0));
+      applyPreview();
+      if (!live) { started = false; saveDraft(); renderKeys(); } else markOverridden(row, theme);
+    };
+    num.addEventListener("input", () => commit(true));
+    num.addEventListener("change", () => commit(false));
+    ctl.append(num);
+  } else {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = String(raw).toLowerCase() === "true";
+    box.addEventListener("change", () => {
+      snapshot();
+      theme.values[key] = box.checked ? "true" : "false";
+      applyPreview(); saveDraft(); renderKeys();
+    });
+    ctl.append(box);
+  }
+
+  const badge = document.createElement("span");
+  badge.className = "badge" + (overridden && !isDefault(theme) ? " ov" : "");
+  badge.textContent = isDefault(theme) ? "base" : (overridden ? "set" : "inherited");
+  badge.title = isDefault(theme) ? "Default is the base every theme inherits from"
+    : (overridden ? "Set in this theme" : "Comes from Default");
+  ctl.append(badge);
+
+  const reset = document.createElement("button");
+  reset.className = "reset";
+  reset.textContent = "↺";
+  reset.title = "Remove override (inherit from Default)";
+  reset.disabled = isDefault(theme) || theme.values[key] === undefined;
+  reset.addEventListener("click", () => {
+    snapshot();
+    delete theme.values[key];
+    applyPreview(); saveDraft(); renderKeys();
+  });
+  ctl.append(reset);
+
+  row.appendChild(ctl);
+  return row;
+}
+
+function markOverridden(row, theme) {
+  if (isDefault(theme)) return;
+  row.classList.remove("inherited");
+  const badge = row.querySelector(".badge");
+  badge.className = "badge ov";
+  badge.textContent = "set";
+  row.querySelector(".reset").disabled = false;
+}
+
+// ---------- theme select ----------
+const themeSel = document.getElementById("themeSel");
+function renderThemeSelect() {
+  themeSel.innerHTML = "";
+  for (const theme of state.themes) {
+    const option = document.createElement("option");
+    option.value = theme.name;
+    const count = Object.keys(theme.values).length;
+    option.textContent = isDefault(theme) ? `${theme.name} (base)` : `${theme.name} (${count} set)`;
+    themeSel.appendChild(option);
+  }
+  if (!getTheme(state.current)) state.current = state.themes[0].name;
+  themeSel.value = state.current;
+  document.getElementById("btnDelete").disabled = isDefault(getTheme(state.current));
+  document.getElementById("btnRename").disabled = isDefault(getTheme(state.current));
+}
+themeSel.addEventListener("change", () => { state.current = themeSel.value; saveDraft(); renderAll(); });
+
+function renderAll() {
+  renderThemeSelect();
+  renderKeys();
+  applyPreview();
+  const theme = getTheme(state.current);
+  document.getElementById("status").textContent = isDefault(theme)
+    ? "Editing the base theme: every other theme inherits these values."
+    : `${Object.keys(theme.values).length} of ${KEY_ORDER.length} values set; the rest come from Default.`;
+}
+
+// ---------- jump from preview to key ----------
+ed.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-k]");
+  if (!target) return;
+  const key = target.dataset.k.split(",")[0];
+  searchEl.value = "";
+  onlyOvEl.checked = false;
+  renderKeys();
+  const row = keysEl.querySelector(`.row[data-key="${key}"]`);
+  if (!row) return;
+  row.scrollIntoView({ block: "center", behavior: "smooth" });
+  row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+  const others = target.dataset.k.split(",").slice(1);
+  document.getElementById("status").textContent = others.length
+    ? `${key} (also uses: ${others.join(", ")})` : key;
+});
+ed.addEventListener("mouseover", (event) => {
+  const target = event.target.closest("[data-k]");
+  if (target) target.title = target.dataset.k.split(",").join("\n");
+});
+document.getElementById("outline").addEventListener("change", (e) => ed.classList.toggle("outline", e.target.checked));
+searchEl.addEventListener("input", renderKeys);
+onlyOvEl.addEventListener("change", renderKeys);
+
+// ---------- name dialog ----------
+function askName(title, initial, onOk, validate) {
+  const modal = document.getElementById("modalName");
+  const input = document.getElementById("nameInput");
+  const msg = document.getElementById("nameMsg");
+  document.getElementById("nameTitle").textContent = title;
+  input.value = initial;
+  msg.textContent = "";
+  modal.classList.add("open");
+  input.focus(); input.select();
+  const close = () => { modal.classList.remove("open"); ok.onclick = null; };
+  const ok = document.getElementById("nameOk");
+  ok.onclick = () => {
+    const name = input.value.trim().replace(/[\[\]]/g, "");
+    if (validate) { const problem = validate(name); if (problem) { msg.textContent = problem; return; } close(); onOk(name); return; }
+    if (!name) { msg.textContent = "Enter a name."; return; }
+    if (getTheme(name) && name !== initial) { msg.textContent = "A theme with that name exists."; return; }
+    close(); onOk(name);
+  };
+  document.getElementById("nameCancel").onclick = close;
+  input.onkeydown = (e) => { if (e.key === "Enter") ok.onclick(); if (e.key === "Escape") close(); };
+}
+function uniqueName(base) {
+  let name = base, i = 2;
+  while (getTheme(name)) name = `${base} ${i++}`;
+  return name;
+}
+
+document.getElementById("btnNew").addEventListener("click", () => {
+  askName("New theme (inherits everything from Default)", uniqueName("My Theme"), (name) => {
+    snapshot();
+    state.themes.push({ name, values: {} });
+    state.current = name; saveDraft(); renderAll();
+  });
+});
+document.getElementById("btnDup").addEventListener("click", () => {
+  const source = getTheme(state.current);
+  askName("Duplicate theme", uniqueName(source.name + " Copy"), (name) => {
+    snapshot();
+    state.themes.push({ name, values: { ...source.values } });
+    state.current = name; saveDraft(); renderAll();
+  });
+});
+document.getElementById("btnRename").addEventListener("click", () => {
+  const theme = getTheme(state.current);
+  if (isDefault(theme)) return;
+  askName("Rename theme", theme.name, (name) => {
+    snapshot();
+    theme.name = name; state.current = name; saveDraft(); renderAll();
+  });
+});
+document.getElementById("btnDelete").addEventListener("click", () => {
+  const theme = getTheme(state.current);
+  if (isDefault(theme)) return;
+  askName(`Type "${theme.name}" to delete it`, "", () => {
+    snapshot();
+    state.themes = state.themes.filter(t => t !== theme);
+    state.current = defaultTheme().name; saveDraft(); renderAll();
+  }, (typed) => typed === theme.name ? "" : "Name does not match.");
+});
+document.getElementById("btnUndo").addEventListener("click", undo);
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.target.matches("input[type=text],textarea,.hex")) { e.preventDefault(); undo(); }
+});
+
+// ---------- export / import ----------
+function buildIni() {
+  const out = [];
+  const separator = "; -------------------------------------------------------";
+  const base = defaultTheme();
+  const ordered = [base, ...state.themes.filter(t => t !== base)];
+  ordered.forEach((theme, index) => {
+    if (index > 0) out.push(separator, "");
+    out.push(`[${theme.name}]`);
+    const keys = KEY_ORDER.filter(k => theme.values[k] !== undefined);
+    const unknown = Object.keys(theme.values).filter(k => !KEY_INFO[k]);
+    let wroteAny = false;
+    for (const key of keys) {
+      if (KEY_GROUP_START.has(key) && wroteAny) out.push("");
+      out.push(`${key} = ${theme.values[key]}`);
+      wroteAny = true;
+    }
+    if (unknown.length) { out.push(""); for (const key of unknown) out.push(`${key} = ${theme.values[key]}`); }
+    out.push("");
+  });
+  out.push(separator, "");
+  out.push(state.trailer || "; [Custom Theme Name]\n; accent_color = 1.0, 1.0, 1.0, 1.0\n; ...");
+  out.push("", "");
+  return out.join("\n");
+}
+
+function buildThemeBlock(theme, includeInherited) {
+  const out = ["; -------------------------------------------------------", "", `[${theme.name}]`];
+  let wroteAny = false;
+  for (const key of KEY_ORDER) {
+    const own = theme.values[key];
+    const value = own !== undefined ? own : (includeInherited || isDefault(theme) ? effective(theme, key) : undefined);
+    if (value === undefined || value === null) continue;
+    if (KEY_GROUP_START.has(key) && wroteAny) out.push("");
+    out.push(`${key} = ${value}`);
+    wroteAny = true;
+  }
+  if (!wroteAny) out.push("; (no overrides: this theme looks exactly like Default)");
+  out.push("", "");
+  return out.join("\n");
+}
+
+function exportText() {
+  const mode = document.querySelector('input[name=exmode]:checked').value;
+  const theme = getTheme(state.current);
+  document.getElementById("inhWrap").style.display = mode === "theme" && !isDefault(theme) ? "flex" : "none";
+  if (mode === "file") {
+    ioMsg.textContent = "Replace the whole contents of engine/config/editor_themes.ini (back it up first).";
+    return buildIni();
+  }
+  ioMsg.textContent = isDefault(theme)
+    ? "This is the [Default] base theme. Editing it changes every theme; use Whole file to replace it."
+    : `Paste at the end of engine/config/editor_themes.ini, then restart the editor and pick "${theme.name}" in its theme setting. If a [${theme.name}] section already exists, replace that one instead.`;
+  return buildThemeBlock(theme, document.getElementById("exInherited").checked);
+}
+document.querySelectorAll('input[name=exmode]').forEach(r => r.addEventListener("change", () => { ioText.value = exportText(); }));
+document.getElementById("exInherited").addEventListener("change", () => { ioText.value = exportText(); });
+
+const modalIO = document.getElementById("modalIO");
+const ioText = document.getElementById("ioText");
+const ioMsg = document.getElementById("ioMsg");
+let ioMode = "export";
+
+function openIO(mode) {
+  ioMode = mode;
+  document.getElementById("ioTitle").textContent = mode === "export"
+    ? "Export"
+    : "Import: paste the contents of editor_themes.ini, or open the file";
+  document.getElementById("ioAction").textContent = mode === "export" ? "Copy" : "Load";
+  document.getElementById("ioPick").style.display = mode === "export" ? "none" : "";
+  document.getElementById("exportOpts").style.display = mode === "export" ? "flex" : "none";
+  ioMsg.textContent = "";
+  ioText.value = mode === "export" ? exportText() : "";
+  ioText.readOnly = mode === "export";
+  modalIO.classList.add("open");
+  if (mode === "import") ioText.focus();
+}
+document.getElementById("btnExport").addEventListener("click", () => openIO("export"));
+document.getElementById("btnImport").addEventListener("click", () => openIO("import"));
+document.getElementById("ioClose").addEventListener("click", () => modalIO.classList.remove("open"));
+document.getElementById("ioPick").addEventListener("click", () => document.getElementById("ioFile").click());
+document.getElementById("ioFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { ioText.value = reader.result; ioMsg.textContent = `Loaded ${file.name}. Press Load.`; };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+document.getElementById("ioAction").addEventListener("click", async () => {
+  if (ioMode === "export") {
+    ioText.select();
+    try { await navigator.clipboard.writeText(ioText.value); ioMsg.textContent = "Copied to the clipboard."; }
+    catch (err) { ioMsg.textContent = "Copy was blocked: the text is selected, press Ctrl+C."; }
+    return;
+  }
+  const parsed = parseIni(ioText.value);
+  if (!parsed.themes.length) { ioMsg.textContent = "No [Theme] sections found."; return; }
+  if (!parsed.themes.some(t => t.name === "Default")) { ioMsg.textContent = "The file has no [Default] section, which every theme inherits from."; return; }
+  snapshot();
+  state = { themes: parsed.themes, current: getThemeName(parsed.themes, state.current), trailer: parsed.trailer };
+  saveDraft(); renderAll();
+  modalIO.classList.remove("open");
+});
+function getThemeName(themes, wanted) {
+  return themes.some(t => t.name === wanted) ? wanted : themes[themes.length > 1 ? 1 : 0].name;
+}
+
+// ---------- start ----------
+if (!loadDraft()) {
+  const parsed = parseIni(ORIGINAL_INI);
+  state = { themes: parsed.themes, current: "Dark Blue", trailer: parsed.trailer };
+}
+renderAll();
+</script>
+</body>
+</html>
